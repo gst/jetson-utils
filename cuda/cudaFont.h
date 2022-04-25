@@ -23,7 +23,7 @@
 #ifndef __CUDA_FONT_H__
 #define __CUDA_FONT_H__
 
-
+#include <cuda.h>
 #include "cudaUtility.h"
 #include "imageFormat.h"
 
@@ -84,7 +84,8 @@ public:
 			        const char* str, int x, int y, 
 				   const float4& color=make_float4(0, 0, 0, 255),
 				   const float4& background=make_float4(0, 0, 0, 0),
-				   int backgroundPadding=5 );
+				   int backgroundPadding=5,
+                     CUstream stream=0);
 
 	/**
 	 * Render text overlay onto image
@@ -94,7 +95,8 @@ public:
 			        const std::vector< std::pair< std::string, int2 > >& text,
 			        const float4& color=make_float4(0, 0, 0, 255),
 				   const float4& background=make_float4(0, 0, 0, 0),
-				   int backgroundPadding=5 );
+				   int backgroundPadding=5,
+                     CUstream stream=0);
 
 	/**
 	 * Render text overlay onto image
@@ -103,9 +105,10 @@ public:
 			        				    const char* str, int x, int y, 
 				   				    const float4& color=make_float4(0, 0, 0, 255),
 				   				    const float4& background=make_float4(0, 0, 0, 0),
-				   				    int backgroundPadding=5 )		
+				   				    int backgroundPadding=5,
+                     CUstream stream=0 )
 	{ 
-		return OverlayText(image, imageFormatFromType<T>(), width, height, str, x, y, color, background, backgroundPadding); 
+		return OverlayText(image, imageFormatFromType<T>(), width, height, str, x, y, color, background, backgroundPadding, stream);
 	}
 			
 	/**
@@ -115,9 +118,10 @@ public:
 			        				    const std::vector< std::pair< std::string, int2 > >& text, 
 				   				    const float4& color=make_float4(0, 0, 0, 255),
 				   				    const float4& background=make_float4(0, 0, 0, 0),
-				   				    int backgroundPadding=5 )		
+				   				    int backgroundPadding=5,
+                     CUstream stream=0 )
 	{ 
-		return OverlayText(image, imageFormatFromType<T>(), width, height, text, color, background, backgroundPadding); 
+		return OverlayText(image, imageFormatFromType<T>(), width, height, text, color, background, backgroundPadding, stream);
 	}
 
 	/**

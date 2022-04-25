@@ -56,7 +56,7 @@ file(GLOB pythonUtilsSources *.cpp)
 
 cuda_add_library(jetson-utils-python-${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR} SHARED ${pythonUtilsSources})
 
-target_link_libraries(jetson-utils-python-${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR} jetson-utils ${PYTHON_LIBRARIES})
+target_link_libraries(jetson-utils-python-${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR} image-utils ${PYTHON_LIBRARIES})
 
 if(${NUMPY_FOUND})
 	target_link_libraries(jetson-utils-python-${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR} npymath)

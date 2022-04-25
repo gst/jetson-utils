@@ -123,30 +123,21 @@ __global__ void gpuRectFillBox( T* input, T* output, int imgWidth, int imgHeight
 {
 	const int box_x = blockIdx.x * blockDim.x + threadIdx.x;
 	const int box_y = blockIdx.y * blockDim.y + threadIdx.y;
-
-	if( box_x >= boxWidth || box_y >= boxHeight )
-		return;
-
 	const int x = box_x + x0;
 	const int y = box_y + y0;
 
-	if( x >= imgWidth || y >= imgHeight )
-		return;
+    if( x < 0 || y < 0 || x >= imgWidth || y >= imgHeight )
+        return;
 
-	T px = input[ y * imgWidth + x ];
-
-	const float alpha = color.w / 255.0f;
-	const float ialph = 1.0f - alpha;
-
-	px.x = alpha * color.x + ialph * px.x;
-	px.y = alpha * color.y + ialph * px.y;
-	px.z = alpha * color.z + ialph * px.z;
-	
-	output[y * imgWidth + x] = px;
+    const auto plane_size = imgWidth * imgHeight;
+    const auto plane_off = y * imgWidth + x;
+	((float *)output)[0*plane_size + plane_off] = color.x;
+	((float *)output)[1*plane_size + plane_off] = color.y;
+	((float *)output)[2*plane_size + plane_off] = color.z;
 }
 
 template<typename T>
-cudaError_t launchRectFill( T* input, T* output, size_t width, size_t height, float4* rects, int numRects, const float4& color )
+cudaError_t launchRectFill( T* input, T* output, size_t width, size_t height, float4* rects, int numRects, const float4& color, cudaStream_t stream )
 {
 	// if input and output are the same image, then we can use the faster method
 	// which draws 1 box per kernel, but doesn't copy pixels that aren't inside boxes
@@ -161,7 +152,7 @@ cudaError_t launchRectFill( T* input, T* output, size_t width, size_t height, fl
 			const dim3 blockDim(8, 8);
 			const dim3 gridDim(iDivUp(boxWidth,blockDim.x), iDivUp(boxHeight,blockDim.y));
 
-			gpuRectFillBox<T><<<gridDim, blockDim>>>(input, output, width, height, (int)rects[n].x, (int)rects[n].y, boxWidth, boxHeight, color); 
+			gpuRectFillBox<T><<<gridDim, blockDim, 0, stream>>>(input, output, width, height, (int)rects[n].x, (int)rects[n].y, boxWidth, boxHeight, color);
 		}
 	}
 	else
@@ -170,26 +161,29 @@ cudaError_t launchRectFill( T* input, T* output, size_t width, size_t height, fl
 		const dim3 blockDim(8, 8);
 		const dim3 gridDim(iDivUp(width,blockDim.x), iDivUp(height,blockDim.y));
 
-		gpuRectFill<T><<<gridDim, blockDim>>>(input, output, width, height, rects, numRects, color);
+		gpuRectFill<T><<<gridDim, blockDim, 0, stream>>>(input, output, width, height, rects, numRects, color);
 	}
 
 	return cudaGetLastError();
 }
 
 // cudaRectFill
-cudaError_t cudaRectFill( void* input, void* output, size_t width, size_t height, imageFormat format, float4* rects, int numRects, const float4& color )
+cudaError_t cudaRectFill( void* input, void* output, size_t width, size_t height, imageFormat format, float4* rects, int numRects, const float4& color, cudaStream_t stream )
 {
 	if( !input || !output || width == 0 || height == 0 || !rects || numRects == 0 )
 		return cudaErrorInvalidValue;
 
+	const float4 color_scaled = make_float4( color.x / 255.0f, color.y / 255.0f, color.z / 255.0f, color.w / 255.0f );
+
 	if( format == IMAGE_RGB8 )
-		return launchRectFill<uchar3>((uchar3*)input, (uchar3*)output, width, height, rects, numRects, color); 
+		return launchRectFill<uchar3>((uchar3*)input, (uchar3*)output, width, height, rects, numRects, color_scaled, stream);
 	else if( format == IMAGE_RGBA8 )
-		return launchRectFill<uchar4>((uchar4*)input, (uchar4*)output, width, height, rects, numRects, color); 
+		return launchRectFill<uchar4>((uchar4*)input, (uchar4*)output, width, height, rects, numRects, color_scaled, stream);
 	else if( format == IMAGE_RGB32F )
-		return launchRectFill<float3>((float3*)input, (float3*)output, width, height, rects, numRects, color); 
+		return launchRectFill<float3>((float3*)input, (float3*)output, width, height, rects, numRects, color_scaled, stream);
 	else if( format == IMAGE_RGBA32F )
-		return launchRectFill<float4>((float4*)input, (float4*)output, width, height, rects, numRects, color); 
+		return launchRectFill<float4>((float4*)input, (float4*)output, width, height, rects, numRects, color_scaled, stream);
 	else
 		return cudaErrorInvalidValue;
+		
 }
